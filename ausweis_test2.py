@@ -1,5 +1,6 @@
 import json
 import websocket
+import argparse
 
 def on_message(ws, message):
     msg = json.loads(message)
@@ -11,7 +12,7 @@ def on_message(ws, message):
         print(f"Sent: {cmd}")
 
     elif msg.get("msg") == "ENTER_PIN":
-        cmd = {"cmd": "SET_PIN", "value": "123456"}  # replace with actual PIN
+        cmd = {"cmd": "SET_PIN", "value": pin}  # use the globally set PIN
         ws.send(json.dumps(cmd))
         print(f"Sent: {cmd}")
 
@@ -24,19 +25,27 @@ def on_message(ws, message):
 def on_error(ws, error):
     print(f"Error: {error}")
 
-
-def on_close(ws, status_code, reason):
-    print(f"Connection closed with status code {status_code} and reason {reason}")
+def on_close(ws):
+    print("Connection closed")
 
 def on_open(ws):
-    cmd = {"cmd": "RUN_AUTH", "tcTokenURL": "https://127.0.0.1:24727/eID-Client?tcTokenURL=", "developerMode": True, "status": True}
-    #cmd = {"cmd": "RUN_AUTH", "tcTokenURL": "https://test.governikus-eid.de/DEMO"}
-    #cmd = {"cmd": "RUN_AUTH", "tcTokenURL": "https://test.governikus-eid.de/AusweisAuskunft/WebServiceReq"}
+    cmd = {"cmd": "RUN_AUTH", "tcTokenURL": tcTokenURL}  # use the globally set URL
     ws.send(json.dumps(cmd))
     print(f"Sent: {cmd}")
 
 if __name__ == "__main__":
-    ws = websocket.WebSocketApp("ws://localhost:24727/eID-Kernel",
+    parser = argparse.ArgumentParser(description='Connect to the OnlineAusweis service')
+    parser.add_argument('--pin', required=True, help='the pin to use for authentication')
+    parser.add_argument('--url', default='ws://localhost:24727/eID-Client', help='the url to connect to')
+    parser.add_argument('--token', default='https://test.governikus-eid.de/DEMO', help='the token url to use')
+    args = parser.parse_args()
+
+    global pin
+    pin = args.pin
+    global tcTokenURL
+    tcTokenURL = args.token
+
+    ws = websocket.WebSocketApp(args.url,
                                 on_open=on_open,
                                 on_message=on_message,
                                 on_error=on_error,
